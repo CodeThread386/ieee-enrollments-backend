@@ -1,11 +1,13 @@
 import jwt from "jsonwebtoken";
 import moment from "moment-timezone";
 import mongoose from "mongoose";
-import { generateTokens, setCookies } from "../lib/auth.js";
+import {
+  baseCookieOptions,
+  generateTokens,
+  setCookies,
+} from "../lib/auth.js";
 import User from "../models/user.model.js";
 import Slot from "../models/slot.model.js";
-
-const isProduction = process.env.NODE_ENV === "production";
 
 export const fetchUserData = async (req, res) => {
   try {
@@ -20,6 +22,7 @@ export const fetchUserData = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phoneNumber: user.phoneNumber || null,
         picture: user.picture,
         isEliminated: user.isEliminated,
         currentRound: user.currentRound,
@@ -64,7 +67,7 @@ export const fetchUserData = async (req, res) => {
 
 export const login = async (req, res) => {
   const { name, email, picture } = req.user;
-  const deviceId = req.body.deviceId;
+  const { deviceId, phoneNumber } = req.body;
   if (
     !email ||
     email.trim().length === 0 ||
@@ -86,18 +89,33 @@ export const login = async (req, res) => {
   const regNoIndex = name.lastIndexOf(" ");
   const userName = name.slice(0, regNoIndex).trim();
   const regNo = name.slice(regNoIndex + 1).trim();
-  const isFresher = regNo.startsWith("24");
+  const isFresher = regNo.startsWith("24" || "25" || "2");
   try {
     const currentUser = await User.findOne({ email });
     let user, slot;
     if (currentUser) {
+      console.log(`Existing user logging in: ${email}`);
       user = currentUser;
       slot = await Slot.findOne({
         round: user.currentRound,
         users: user._id,
       });
     } else {
-      user = await User.create({ name: userName, email, isFresher, picture });
+      console.log(`New user registration attempt: ${email}, phoneNumber: ${phoneNumber}`);
+      // Phone number is only required for new user registration
+      if (!phoneNumber || !/^[6789]\d{9}$/.test(phoneNumber)) {
+        return res.status(400).json({
+          success: false,
+          message: "Valid phone number is required for registration (10 digits starting with 6, 7, 8, or 9)",
+        });
+      }
+      user = await User.create({
+        name: userName,
+        email,
+        phoneNumber,
+        isFresher,
+        picture
+      });
     }
     const { accessToken, refreshToken } = generateTokens(user._id);
     user.refreshTokens = user.refreshTokens || [];
@@ -117,6 +135,7 @@ export const login = async (req, res) => {
         _id: user._id,
         name: user.name,
         email: user.email,
+        phoneNumber: user.phoneNumber || null,
         picture: user.picture,
         isEliminated: user.isEliminated,
         currentRound: user.currentRound,
@@ -164,15 +183,11 @@ export const logout = async (req, res) => {
       });
     }
     res.clearCookie("accessToken", {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "None",
+      ...baseCookieOptions,
       path: "/",
     });
     res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "None",
+      ...baseCookieOptions,
       path: "/",
     });
     return res
@@ -213,9 +228,7 @@ export const refreshToken = async (req, res) => {
       { expiresIn: "15m" }
     );
     res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "None",
+      ...baseCookieOptions,
       maxAge: 15 * 60 * 1000,
     });
     return res

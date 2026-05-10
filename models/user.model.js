@@ -14,6 +14,11 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       trim: true,
     },
+    phoneNumber: {
+      type: String,
+      required: false,
+      match: [/^[6789]\d{9}$/, "Invalid phone number format"],
+    },
     picture: {
       type: String,
     },

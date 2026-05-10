@@ -1,13 +1,15 @@
 import jwt from "jsonwebtoken";
 import moment from "moment-timezone";
 import mongoose from "mongoose";
-import { generateTokens, setCookies } from "../lib/auth.js";
+import {
+  baseCookieOptions,
+  generateTokens,
+  setCookies,
+} from "../lib/auth.js";
 import User from "../models/user.model.js";
 import Admin from "../models/admin.model.js";
 import Slot from "../models/slot.model.js";
 import sendMail from "../lib/mail.js";
-
-const isProduction = process.env.NODE_ENV === "production";
 
 export const fetchAdminData = async (req, res) => {
   try {
@@ -99,15 +101,11 @@ export const logout = async (req, res) => {
       });
     }
     res.clearCookie("accessToken", {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "None",
+      ...baseCookieOptions,
       path: "/",
     });
     res.clearCookie("refreshToken", {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "None",
+      ...baseCookieOptions,
       path: "/",
     });
     return res
@@ -148,9 +146,7 @@ export const refreshToken = async (req, res) => {
       { expiresIn: "15m" }
     );
     res.cookie("accessToken", accessToken, {
-      httpOnly: true,
-      secure: isProduction,
-      sameSite: "None",
+      ...baseCookieOptions,
       maxAge: 15 * 60 * 1000,
     });
     return res
