@@ -1,30 +1,29 @@
+/**
+ * Candidate routes - mounted at /api/user.
+ */
 import express from "express";
-import {
-  authenticateFirebaseUser,
-  protectUserRoute,
-} from "../middleware/auth.middleware.js";
-import {
-  fetchAvailableSlots,
-  fetchUserData,
-  login,
-  logout,
-  ready,
-  refreshToken,
-  round0Submission,
-  selectSlot,
-  taskSubmission,
-} from "../controllers/user.controller.js";
+import * as user from "../controllers/user.controller.js";
+import { asyncHandler as h } from "../lib/http.js";
+import { protectUser, requireIdentity } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/", protectUserRoute, fetchUserData);
-router.post("/", authenticateFirebaseUser, login);
-router.post("/logout", logout);
-router.post("/refresh-token", refreshToken);
-router.post("/r0-submission", protectUserRoute, round0Submission);
-router.get("/available-slots", protectUserRoute, fetchAvailableSlots);
-router.put("/select-slot/:slotId", protectUserRoute, selectSlot);
-router.put("/ready/:slotId", protectUserRoute, ready);
-router.post("/task-submission", protectUserRoute, taskSubmission);
+// Session
+router.post("/", requireIdentity, h(user.login));
+router.post("/refresh-token", h(user.refresh));
+router.post("/logout", h(user.logout));
+router.get("/", protectUser, h(user.me));
+
+// Stage 1 - application form
+router.get("/application/form", protectUser, h(user.getApplicationForm));
+router.post("/application", protectUser, h(user.submitApplication));
+
+// Stage 2 - task submission
+router.post("/task", protectUser, h(user.submitTask));
+
+// Stage 3 - slot booking
+router.get("/slots", protectUser, h(user.getSlots));
+router.post("/slots/:slotId/book", protectUser, h(user.book));
+router.delete("/booking", protectUser, h(user.cancel));
 
 export default router;

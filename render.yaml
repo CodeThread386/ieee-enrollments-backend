@@ -1,0 +1,61 @@
+# Render Blueprint - https://render.com/docs/blueprint-spec
+# Creates the API web service and a cron job that emails meeting links.
+# Secrets marked `sync: false` must be filled in on the Render dashboard.
+services:
+  - type: web
+    name: ieee-enrollments-backend
+    runtime: node
+    plan: starter # free instances sleep after 15 min idle - avoid during enrollments
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: ALLOWED_EMAIL_DOMAIN
+        value: vitstudent.ac.in
+      - key: COOKIE_SAMESITE
+        value: lax
+      - key: ENABLE_INTERNAL_SCHEDULER
+        value: "true"
+      - key: DATABASE_URL
+        sync: false
+      - key: ACCESS_TOKEN_SECRET
+        generateValue: true
+      - key: REFRESH_TOKEN_SECRET
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: SUPERADMIN_EMAILS
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: CLIENT_ORIGINS
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+      - key: CRON_SECRET
+        generateValue: true
+
+  # Sends meeting links even if the web service is asleep or restarting.
+  - type: cron
+    name: ieee-enrollments-meeting-links
+    runtime: node
+    schedule: "*/5 * * * *"
+    buildCommand: npm ci --omit=dev
+    startCommand: npm run cron:meeting-links
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: MAIL_USER
+        sync: false
+      - key: MAIL_PASS
+        sync: false
+      - key: APP_URL
+        sync: false

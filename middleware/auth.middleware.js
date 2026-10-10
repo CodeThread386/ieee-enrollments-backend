@@ -1,106 +1,104 @@
-import jwt from "jsonwebtoken";
-import admin from "../lib/firebase.js";
-import Admin from "../models/admin.model.js";
-import User from "../models/user.model.js";
+/**
+ * Authentication / authorisation middleware.
+ */
+import crypto from "node:crypto";
+import { eq } from "drizzle-orm";
+import { env } from "../config/env.js";
+import { db, schema } from "../db/index.js";
+import { readAccessToken } from "../lib/auth.js";
+import { verifyGoogleIdToken } from "../lib/google.js";
+import { asyncHandler, HttpError } from "../lib/http.js";
+import { loadCandidate } from "../services/candidate.service.js";
 
-export const authenticateFirebaseUser = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res
-      .status(401)
-      .json({ success: false, message: "Unauthorized access denied" });
-  }
-  const token = authHeader.split(" ")[1];
-  try {
-    const decodedToken = await admin.auth().verifyIdToken(token);
-    req.user = decodedToken;
-    next();
-  } catch (err) {
-    return res
-      .status(401)
-      .json({ success: false, message: "Unauthorized access denied" });
-  }
-};
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export const protectUserRoute = async (req, res, next) => {
-  try {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access denied" });
-    }
-    try {
-      const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-      const user = await User.findById(decoded.userId);
-      if (!user) {
-        return res
-          .status(401)
-          .json({ success: false, message: "User not found" });
-      }
-      req.user = user;
-      next();
-    } catch (err) {
-      if (err.name === "TokenExpiredError") {
-        return res
-          .status(401)
-          .json({ success: false, message: "Access token expired" });
-      }
-      throw err;
-    }
-  } catch (err) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
-  }
-};
+/** Returns "superadmin", "admin" or null for an email based on the allow-lists. */
+export function getAdminRole(email) {
+  const normalised = String(email || "").toLowerCase();
+  if (env.superadminEmails.includes(normalised)) return "superadmin";
+  if (env.adminEmails.includes(normalised)) return "admin";
+  return null;
+}
 
-export const protectAdminRoute = async (req, res, next) => {
-  try {
-    const accessToken = req.cookies.accessToken;
-    if (!accessToken) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access denied" });
-    }
-    try {
-      const decoded = jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-      const admin = await Admin.findById(decoded.userId);
-      if (!admin) {
-        return res
-          .status(401)
-          .json({ success: false, message: "Admin not found" });
-      }
-      req.user = admin;
-      next();
-    } catch (err) {
-      if (err.name === "TokenExpiredError") {
-        return res
-          .status(401)
-          .json({ success: false, message: "Access token expired" });
-      }
-      throw err;
-    }
-  } catch (err) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
-  }
-};
+/**
+ * Works out who is logging in and stores it on `req.identity`
+ * (`{ email, emailVerified, name, picture, hostedDomain }`).
+ *
+ * - Normal: body `{ credential }` = the ID token from "Sign in with Google",
+ *   verified against Google's keys and our GOOGLE_CLIENT_ID.
+ * - Local testing (DEV_LOGIN=true, never in production): body
+ *   `{ devEmail, devName }` - no Google account needed.
+ */
+export const requireIdentity = asyncHandler(async (req, res, next) => {
+  const body = req.body || {};
 
-export const protectSuperadminRoute = async (req, res, next) => {
-  try {
-    const admin = req.user;
-    if (!admin.access) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Unauthorized access denied" });
-    }
-    next();
-  } catch (err) {
-    return res
-      .status(500)
-      .json({ success: false, message: "Server error", error: err.message });
+  if (env.devLogin && body.devEmail !== undefined) {
+    const email = typeof body.devEmail === "string" ? body.devEmail.trim().toLowerCase() : "";
+    if (!EMAIL_RE.test(email)) throw new HttpError(400, "Enter a valid email address");
+    const name = typeof body.devName === "string" && body.devName.trim() ? body.devName.trim() : email.split("@")[0];
+    req.identity = { email, emailVerified: true, name: name.slice(0, 100), picture: null };
+    return next();
   }
-};
-  
+
+  if (typeof body.credential !== "string" || !body.credential) {
+    throw new HttpError(401, "Missing Google sign-in credential");
+  }
+  if (!env.googleClientId) throw new HttpError(503, "Google sign-in is not configured on the server");
+  try {
+    req.identity = await verifyGoogleIdToken(body.credential);
+  } catch {
+    throw new HttpError(401, "Google sign-in could not be verified. Please try again.");
+  }
+  next();
+});
+
+/** Requires a logged-in candidate; sets `req.candidate` (with all stage data). */
+export const protectUser = asyncHandler(async (req, res, next) => {
+  const userId = readAccessToken(req, "user");
+  const candidate = await loadCandidate(userId);
+  if (!candidate) throw new HttpError(401, "Account not found");
+  req.candidate = candidate;
+  next();
+});
+
+/**
+ * Requires a logged-in admin who is *still* on the allow-list; sets
+ * `req.admin` and `req.adminRole`.
+ */
+export const protectAdmin = asyncHandler(async (req, res, next) => {
+  const adminId = readAccessToken(req, "admin");
+  const [admin] = await db.select().from(schema.admins).where(eq(schema.admins.id, adminId));
+  if (!admin) throw new HttpError(401, "Admin account not found");
+  const role = getAdminRole(admin.email);
+  if (!role) throw new HttpError(403, "Your admin access has been revoked");
+  req.admin = admin;
+  req.adminRole = role;
+  next();
+});
+
+/** Restricts a route to superadmins (must run after `protectAdmin`). */
+export function requireSuperadmin(req, res, next) {
+  if (req.adminRole !== "superadmin") {
+    return next(new HttpError(403, "Only superadmins can do this"));
+  }
+  next();
+}
+
+/**
+ * Protects cron endpoints. Accepts `Authorization: Bearer <CRON_SECRET>` or
+ * `x-cron-secret: <CRON_SECRET>`. Disabled entirely when no secret is set.
+ */
+export function requireCronSecret(req, res, next) {
+  if (!env.cronSecret) return next(new HttpError(503, "Cron endpoint is not configured"));
+  const header = req.headers.authorization || "";
+  const provided = header.startsWith("Bearer ")
+    ? header.slice("Bearer ".length)
+    : String(req.headers["x-cron-secret"] || "");
+  const a = Buffer.from(provided);
+  const b = Buffer.from(env.cronSecret);
+  // Constant-time comparison to avoid leaking the secret through timing.
+  if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+    return next(new HttpError(401, "Invalid cron secret"));
+  }
+  next();
+}

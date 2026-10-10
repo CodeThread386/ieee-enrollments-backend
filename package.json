@@ -1,28 +1,43 @@
 {
-  "name": "backend",
-  "version": "1.0.0",
+  "name": "ieee-enrollments-backend",
+  "version": "2.0.0",
+  "description": "IEEE-VIT Enrollments 2025-26 API",
   "main": "server.js",
+  "type": "module",
+  "author": "IEEE VIT",
+  "license": "ISC",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "node --watch server.js",
+    "dev:memory": "node scripts/dev-memory.js",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node scripts/migrate.js",
+    "db:studio": "drizzle-kit studio",
+    "seed": "node scripts/seed.js",
+    "cron:meeting-links": "node scripts/send-meeting-links.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "keywords": [],
-  "author": "IEEE VIT",
-  "type": "module",
-  "license": "ISC",
-  "description": "IEEE VIT Enrollment 2025",
   "dependencies": {
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.45.2",
     "express": "^4.21.2",
-    "firebase-admin": "^13.1.0",
+    "google-auth-library": "^11.1.0",
+    "helmet": "^8.0.0",
     "jsonwebtoken": "^9.0.2",
     "moment-timezone": "^0.5.47",
-    "mongoose": "^8.10.1",
-    "nodemailer": "^6.10.0"
+    "nodemailer": "^6.10.0",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.9"
+    "@electric-sql/pglite": "^0.5.8",
+    "drizzle-kit": "^0.31.10",
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.8"
   }
 }
