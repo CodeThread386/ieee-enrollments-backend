@@ -9,6 +9,9 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+// Force the server's global timezone to IST (console.logs, new Date(), etc.)
+process.env.TZ = process.env.TZ || "Asia/Kolkata";
+
 /** Splits a comma separated env value into a clean, lower-cased list. */
 const toList = (value) =>
   (value || "")
