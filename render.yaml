@@ -1,11 +1,19 @@
 # Render Blueprint - https://render.com/docs/blueprint-spec
-# Creates the API web service and a cron job that emails meeting links.
+# Creates the API web service on the free plan.
 # Secrets marked `sync: false` must be filled in on the Render dashboard.
+#
+# Free-plan setup (see README "Free tier: keeping things awake"):
+#  - An external cron (e.g. cron-job.org) pings GET /api/health every 10 min
+#    so the free instance never sleeps. /api/health does NOT touch the
+#    database, so Neon can still scale to zero and stay within its free hours.
+#  - Optionally the same cron can POST /api/cron/meeting-links (with
+#    CRON_SECRET); it is a no-op unless a meeting link is actually due.
 services:
   - type: web
     name: ieee-enrollments-backend
     runtime: node
-    plan: starter # free instances sleep after 15 min idle - avoid during enrollments
+    plan: free
+    region: singapore # same region as the Neon database (ap-southeast-1)
     buildCommand: npm ci --omit=dev
     startCommand: npm start
     healthCheckPath: /api/health
@@ -40,22 +48,3 @@ services:
         sync: false
       - key: CRON_SECRET
         generateValue: true
-
-  # Sends meeting links even if the web service is asleep or restarting.
-  - type: cron
-    name: ieee-enrollments-meeting-links
-    runtime: node
-    schedule: "*/5 * * * *"
-    buildCommand: npm ci --omit=dev
-    startCommand: npm run cron:meeting-links
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: DATABASE_URL
-        sync: false
-      - key: MAIL_USER
-        sync: false
-      - key: MAIL_PASS
-        sync: false
-      - key: APP_URL
-        sync: false

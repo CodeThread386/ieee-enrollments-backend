@@ -51,6 +51,7 @@ import {
   resetSlotNotifications,
   sendLinksForSlotNow,
 } from "../services/meetingLink.service.js";
+import { invalidateLinkSchedule } from "../services/linkSchedule.js";
 import { getSettings, serializeSettings, updateSettings as saveSettings } from "../services/settings.service.js";
 import { generateSlotTimes, releaseBooking } from "../services/slot.service.js";
 import { assignWaitingCandidates } from "../services/task.service.js";
@@ -742,6 +743,7 @@ export async function updateSlot(req, res) {
   if (slot.meetLink && saved.meetLink && slot.meetLink !== saved.meetLink) {
     await resetSlotNotifications(id);
   }
+  invalidateLinkSchedule(); // link or timing may have changed
   if (saved.meetLink) await dispatchDueMeetingLinks();
   return res.json({ success: true, message: "Slot updated", data: saved });
 }

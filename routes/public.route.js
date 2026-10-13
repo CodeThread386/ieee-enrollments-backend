@@ -8,7 +8,8 @@ import { requireCronSecret } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-router.get("/health", pub.health);
+router.get("/health", pub.health); // no database - safe for keep-alive pings
+router.get("/health/db", h(pub.healthDb));
 router.get("/server-time", pub.serverTime);
 router.get("/config", h(pub.publicConfig));
 router.post("/cron/meeting-links", requireCronSecret, h(pub.runMeetingLinkCron));

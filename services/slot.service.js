@@ -19,6 +19,7 @@ import { HttpError } from "../lib/http.js";
 import { sendMailInBackground } from "../lib/mail.js";
 import { MINUTE } from "../lib/time.js";
 import { loadCandidate, slotEnd } from "./candidate.service.js";
+import { invalidateLinkSchedule } from "./linkSchedule.js";
 
 const { slots, users } = schema;
 
@@ -108,6 +109,7 @@ export async function bookSlot(c, slotId, settings, now = new Date()) {
 
     return seat;
   });
+  invalidateLinkSchedule(); // a new link may now be due sooner
 
   sendMailInBackground({
     to: c.email,
@@ -139,6 +141,7 @@ export async function releaseBooking(userId, slotId) {
         .where(eq(slots.id, slotId));
     }
   });
+  invalidateLinkSchedule();
 }
 
 /** Cancels the candidate's booking (allowed until the link is released). */

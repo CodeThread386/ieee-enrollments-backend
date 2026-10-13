@@ -120,30 +120,54 @@ and send links. Removing an email from the allow-list revokes access immediately
 
 ## Deploying on Render
 
-1. In Render, choose **New > Blueprint** and select this repo (it uses `render.yaml`),
-   or create a **Web Service** by hand: build `npm ci --omit=dev`, start `npm start`,
-   health check `/api/health`.
+1. In Render, choose **New > Blueprint** and select this repo (it uses `render.yaml`:
+   free plan, **Singapore** region), or create a **Web Service** by hand: build
+   `npm ci --omit=dev`, start `npm start`, health check `/api/health`, region
+   Singapore (same as Neon).
 2. Set the secrets: `DATABASE_URL`, `GOOGLE_CLIENT_ID`, admin emails, mail
    credentials, and `CLIENT_ORIGINS`/`APP_URL` (your Vercel URL). Do **not**
    set `DEV_LOGIN`.
 3. Put the Render URL into the frontend's `vercel.json` rewrite.
 
-**Meeting-link emails** are sent three ways, and duplicates are impossible:
-- an in-process scheduler every minute (when the service is awake),
-- the `ieee-enrollments-meeting-links` **Render Cron Job** every 5 minutes
-  (runs even if the web service is asleep),
-- or any external scheduler calling
-  `POST /api/cron/meeting-links` with `Authorization: Bearer $CRON_SECRET`.
+## Free tier: keeping things awake
 
-> **Free plan warning:** free Render web services sleep after 15 minutes idle,
-> and the first request then takes 30-60s. Use a paid instance (Starter) while
-> enrollments are open.
+Expected load: about 50 slots and 100 students a day. The free tiers handle
+that easily. The only thing to manage is *sleeping*:
+
+- **Render (keep awake).** Free services sleep after 15 minutes idle, and the
+  first request then waits about a minute. Point an external cron (cron-job.org,
+  UptimeRobot, ...) at `GET https://<your-render-url>/api/health` **every 10
+  minutes**.
+  - This endpoint never touches the database.
+  - Staying awake all month uses about 744 of Render's 750 free hours per
+    workspace, so keep this the only free Render service.
+- **Neon (let it sleep).** Neon's free plan has 100 compute-hours a month and
+  suspends after 5 idle minutes. It wakes in well under a second, so it should
+  *not* be kept awake. Running 24/7 would use about 180 hours, and Neon would
+  suspend the database mid-month.
+  - Don't ping the database from the cron. `/api/health/db` exists for
+    one-off checks only.
+  - In the Neon console, set the compute to a fixed 0.25 CU (autoscaling
+    min = max = 0.25) so heavy moments can't burn hours faster.
+- **Background jobs don't wake Neon.** The meeting-link scheduler checks every
+  minute but only queries the database when a link is actually due. Pages that
+  auto-refresh pause while their browser tab is hidden.
+
+**Meeting-link emails** go out from the in-process scheduler, which runs every
+minute while the service is awake. You can also point the cron at
+`POST /api/cron/meeting-links` (with `Authorization: Bearer $CRON_SECRET`) as a
+backup. Like the scheduler, it's a no-op unless a link is due, and duplicates
+are impossible either way. (`npm run cron:meeting-links` runs one dispatch
+directly against the database, e.g. from a paid Render Cron Job.)
+
+**Email volume:** a Gmail account can send about 500 emails a day. Each
+candidate gets about 3 (task, booking, link), so 100 a day fits.
 
 ## API overview
 
 All responses are `{ success, message?, data? }`. IDs are UUIDs.
 
-**Public:** `GET /api/health`, `GET /api/server-time`, `GET /api/config`,
+**Public:** `GET /api/health` (no DB), `GET /api/health/db`, `GET /api/server-time`, `GET /api/config`,
 `POST /api/cron/meeting-links` (cron secret).
 
 **Candidate** (`/api/user`): `POST /` login (`{ credential, deviceId }` from

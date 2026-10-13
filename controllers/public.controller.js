@@ -1,15 +1,24 @@
 /**
- * Unauthenticated endpoints (health check, server time, public config) and
+ * Unauthenticated endpoints (health checks, server time, public config) and
  * the cron trigger.
  */
 import { env } from "../config/env.js";
 import { DOMAINS } from "../config/enrollment.js";
 import { isDbHealthy } from "../db/index.js";
-import { dispatchDueMeetingLinks } from "../services/meetingLink.service.js";
+import { runScheduledDispatch } from "../services/meetingLink.service.js";
 import { getSettings } from "../services/settings.service.js";
 
-/** GET /api/health - used by Render's health check. */
-export async function health(req, res) {
+/**
+ * GET /api/health - "is the server up?" for Render's health check and
+ * keep-alive pingers. Deliberately does NOT touch the database, so frequent
+ * pings never keep Neon awake (its free plan only has 100 compute-hours/month).
+ */
+export function health(req, res) {
+  res.json({ success: true, status: "ok", uptimeSeconds: Math.round(process.uptime()) });
+}
+
+/** GET /api/health/db - deep check including the database (use sparingly). */
+export async function healthDb(req, res) {
   const dbUp = await isDbHealthy();
   res.status(dbUp ? 200 : 503).json({ success: dbUp, status: dbUp ? "ok" : "db-down" });
 }
@@ -42,10 +51,11 @@ export async function publicConfig(req, res) {
 }
 
 /**
- * POST /api/cron/meeting-links - run the meeting-link dispatcher.
- * Called by a Render Cron Job (or any external scheduler) with CRON_SECRET.
+ * POST /api/cron/meeting-links - send any meeting links that are due.
+ * Safe to call every few minutes from an external cron (with CRON_SECRET):
+ * it only queries the database when a link is actually due.
  */
 export async function runMeetingLinkCron(req, res) {
-  const result = await dispatchDueMeetingLinks();
+  const result = await runScheduledDispatch();
   res.json({ success: true, data: result });
 }

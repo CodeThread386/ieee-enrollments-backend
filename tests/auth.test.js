@@ -166,7 +166,10 @@ describe("public endpoints", () => {
     const time = await request(app).get("/api/server-time");
     expect(new Date(time.body.time).getTime()).toBeGreaterThan(0);
 
-    expect((await request(app).get("/api/health")).status).toBe(200);
+    const health = await request(app).get("/api/health");
+    expect(health.status).toBe(200);
+    expect(health.body.status).toBe("ok");
+    expect((await request(app).get("/api/health/db")).status).toBe(200);
     expect((await request(app).get("/api/nope")).status).toBe(404);
   });
 });

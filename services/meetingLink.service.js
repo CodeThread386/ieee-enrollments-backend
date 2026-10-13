@@ -5,16 +5,20 @@
  * `meetingLinkLeadMinutes` (default 30) of starting. It is idempotent: each
  * candidate is "claimed" atomically via `meeting_link_sent_at` before the
  * email goes out, so running it from several places at once (internal
- * scheduler + Render cron + manual trigger) never sends duplicates. Failed
+ * scheduler + external cron + manual trigger) never sends duplicates. Failed
  * sends are un-claimed and retried on the next run.
+ *
+ * Background runs go through `runScheduledDispatch`, which skips the database
+ * entirely while no link is due (see linkSchedule.js) so Neon can scale to zero.
  */
-import { and, eq, gte, isNull, lte } from "drizzle-orm";
+import { and, eq, gte, isNotNull, isNull, lte, min } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { db, schema } from "../db/index.js";
 import { meetingLinkEmail } from "../lib/emailTemplates.js";
 import { sendMail } from "../lib/mail.js";
 import { MINUTE } from "../lib/time.js";
 import { slotEnd } from "./candidate.service.js";
+import { canSkipDispatch, invalidateLinkSchedule, rememberNextDue } from "./linkSchedule.js";
 import { getSettings } from "./settings.service.js";
 
 const { users, slots } = schema;
@@ -84,6 +88,40 @@ export async function dispatchDueMeetingLinks({ now = new Date() } = {}) {
 }
 
 /**
+ * When will the next not-yet-sent link be due? (null = nothing pending)
+ * Only slots that have a link count - adding a link triggers a dispatch anyway.
+ */
+async function findNextDueAt(now) {
+  const settings = await getSettings();
+  const [row] = await db
+    .select({ start: min(slots.startTime) })
+    .from(users)
+    .innerJoin(slots, eq(users.slotId, slots.id))
+    .where(
+      and(
+        isNull(users.meetingLinkSentAt),
+        isNotNull(slots.meetLink),
+        gte(slots.startTime, new Date(now.getTime() - MAX_SLOT_DURATION_MINUTES * MINUTE))
+      )
+    );
+  if (!row?.start) return null;
+  return new Date(new Date(row.start).getTime() - settings.meetingLinkLeadMinutes * MINUTE);
+}
+
+/**
+ * Background entry point (in-process scheduler and the cron endpoint).
+ * Skips the database while no link is due; otherwise dispatches and then
+ * works out when the next link will be due.
+ * @returns {{ skipped: true } | { sent: number, failed: number, slotsMissingLink: string[] }}
+ */
+export async function runScheduledDispatch({ now = new Date() } = {}) {
+  if (canSkipDispatch(now)) return { skipped: true };
+  const result = await dispatchDueMeetingLinks({ now });
+  rememberNextDue(await findNextDueAt(now), now);
+  return result;
+}
+
+/**
  * Emails the slot's link to every booked candidate immediately, regardless of
  * timing (admin "Send link now" button). Successful sends are recorded so the
  * scheduler doesn't send the same link again.
@@ -104,6 +142,7 @@ export async function sendLinksForSlotNow(slot) {
       result.failed += 1;
     }
   }
+  invalidateLinkSchedule();
   return result;
 }
 
@@ -113,11 +152,13 @@ export async function sendLinksForSlotNow(slot) {
  */
 export async function resetSlotNotifications(slotId) {
   await db.update(users).set({ meetingLinkSentAt: null }).where(eq(users.slotId, slotId));
+  invalidateLinkSchedule();
 }
 
 /**
- * Runs the dispatcher every minute inside the web process. Overlapping runs
- * are skipped. Returns a function that stops the scheduler.
+ * Checks for due links every minute inside the web process (cheap: it only
+ * queries the database when a link is due). Overlapping runs are skipped.
+ * Returns a function that stops the scheduler.
  */
 export function startMeetingLinkScheduler(intervalMs = MINUTE) {
   let running = false;
@@ -125,7 +166,7 @@ export function startMeetingLinkScheduler(intervalMs = MINUTE) {
     if (running) return;
     running = true;
     try {
-      await dispatchDueMeetingLinks();
+      await runScheduledDispatch();
     } catch (err) {
       console.error("[meeting-links] scheduler error:", err.message);
     } finally {

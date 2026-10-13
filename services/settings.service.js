@@ -5,6 +5,7 @@
  */
 import { eq } from "drizzle-orm";
 import { db, schema } from "../db/index.js";
+import { invalidateLinkSchedule } from "./linkSchedule.js";
 
 const { settings } = schema;
 
@@ -21,6 +22,8 @@ export async function getSettings() {
 export async function updateSettings(patch) {
   await getSettings(); // make sure the row exists
   const [row] = await db.update(settings).set(patch).where(eq(settings.key, "global")).returning();
+  // The meeting-link lead time decides when links are due.
+  if (patch.meetingLinkLeadMinutes !== undefined) invalidateLinkSchedule();
   return row;
 }
 
