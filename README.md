@@ -182,3 +182,35 @@ state, `POST /refresh-token`, `POST /logout`, `GET /application/form`,
 `DELETE /candidates/:id/booking`, `GET|POST /tasks`, `PUT|DELETE /tasks/:id`,
 `GET|POST /slots`, `PUT|DELETE /slots/:id`, `POST /slots/:id/interviewers/me`,
 `POST /slots/:id/send-links`, `GET|PUT /settings`.
+
+---
+
+## Candidate Data Exporter (Python)
+
+A CLI script to export participant data (personal details, domains, candidate projects, assigned recruitment tasks, interview slots, reviews, and Q&A) to styled Excel (`.xlsx`) or CSV (`.csv`) files directly from PostgreSQL.
+
+### Setup
+```bash
+pip install -r scripts/requirements.txt
+```
+
+### Usage
+```bash
+# Export to Excel (.xlsx)
+npm run export:candidates
+# or: python scripts/export_candidates.py
+
+# Export to CSV
+python scripts/export_candidates.py --format csv
+
+# Custom output destination
+python scripts/export_candidates.py -o ./candidates.xlsx
+
+# Filter by domain or stage
+python scripts/export_candidates.py --domain "Web Development"
+python scripts/export_candidates.py --stage task
+
+# Demo preview without database connection
+python scripts/export_candidates.py --demo
+```
+
