@@ -16,7 +16,6 @@ export const DOMAINS = [
   "Video Editing",
   "Cyber Security",
   "Competitive Coding",
-  "Management",
 ];
 
 /**
