@@ -24,7 +24,7 @@ import {
   sql,
   sum,
 } from "drizzle-orm";
-import { DOMAINS, INTERVIEW_STATUSES } from "../config/enrollment.js";
+import { APPLICATION_QUESTIONS, DOMAINS, INTERVIEW_STATUSES } from "../config/enrollment.js";
 import { db, schema } from "../db/index.js";
 import { clearSession, issueSession, refreshSession } from "../lib/auth.js";
 import { HttpError } from "../lib/http.js";
@@ -450,12 +450,16 @@ export async function exportCandidates(req, res) {
   const questionIds = [
     ...new Set(list.flatMap((c) => (c.application?.answers || []).map((a) => a.questionId))),
   ];
+  const questionLabelMap = Object.fromEntries(
+    APPLICATION_QUESTIONS.map((q) => [q.id, q.label])
+  );
+  const questionHeaders = questionIds.map((id) => (questionLabelMap[id] ? `Q: ${questionLabelMap[id]}` : id));
 
   const header = [
     "Name", "Reg No", "Email", "Phone", "Stage", "First domain", "Second domain",
     "GitHub", "LinkedIn", "Project link", "Project description", "Applied at",
-    ...questionIds, "Management question", "Management answer",
-    "Task", "Task status", "Task deadline", "Submission link", "Submission notes", "Submitted at",
+    ...questionHeaders, "Management question", "Management answer",
+    "Task", "Task domain", "Task status", "Task deadline", "Submission link", "Submission notes", "Submitted at",
     "Slot", "Interview status", "Rating", "Remarks",
   ];
   const lines = list.map((c) => {
@@ -465,7 +469,7 @@ export async function exportCandidates(req, res) {
       c.name, c.regNo, c.email, app.phone, getStage(c), app.firstDomain, app.secondDomain,
       app.githubProfile, app.linkedinProfile, app.projectLink, app.projectDescription, app.submittedAt,
       ...questionIds.map((id) => answers[id]), app.managementQuestion, app.managementAnswer,
-      c.task?.title, c.application ? getTaskStatus(c, now) : "", c.task?.deadline,
+      c.task?.title, c.task?.domain, c.application ? getTaskStatus(c, now) : "", c.task?.deadline,
       c.task?.submissionLink, c.task?.submissionNotes, c.task?.submittedAt,
       c.slot?.startTime, c.review?.status ?? (c.slotId ? "pending" : ""), c.review?.rating, c.review?.remarks,
     ].map(csvCell);
@@ -478,7 +482,7 @@ export async function exportCandidates(req, res) {
     `attachment; filename="ieee-enrollments-${now.toISOString().slice(0, 10)}.csv"`
   );
   // BOM so Excel opens UTF-8 correctly.
-  return res.send(`﻿${csv}`);
+  return res.send(`\uFEFF${csv}`);
 }
 
 /* ------------------------------------------------------------------ */
