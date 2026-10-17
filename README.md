@@ -116,7 +116,8 @@ and send links. Removing an email from the allow-list revokes access immediately
 3. Under **Authorized JavaScript origins**, add `http://localhost:5173` and your
    Vercel URL (for example `https://enrollments.ieeevit.org`).
 4. Put the client ID in `GOOGLE_CLIENT_ID`. The frontend reads it from
-   `/api/config`, so you only set it on the backend.
+   `/api/config`, so you only set it on the backend. The client secret and
+   redirect URIs are not used by this flow, so keep the secret out of `.env`.
 
 ## Deploying on Render
 
