@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { sent } from "../lib/mail.js";
+import { taskDeadline } from "../services/task.service.js";
 import {
   applicationBody,
   clearDb,
@@ -51,7 +52,15 @@ describe("application form", () => {
     expect(res.body.message).toMatch(message);
   });
 
-  it("assigns a random task from the first-choice domain with a 48h deadline", async () => {
+  it.each([
+    ["early on the 24th", "2026-10-24T00:05:00+05:30"],
+    ["late on the 24th", "2026-10-24T23:55:00+05:30"],
+  ])("sets the deadline to 11:59 PM IST two days later when assigned %s", (_, assignedAt) => {
+    const deadline = taskDeadline(new Date(assignedAt), 48);
+    expect(deadline.toISOString()).toBe(new Date("2026-10-26T23:59:59.999+05:30").toISOString());
+  });
+
+  it("assigns a random task from the first-choice domain due at end of day, two days later", async () => {
     await createTask("Design");
     const webTask = await createTask("Web Development");
     const { agent } = await loginCandidate();
@@ -65,9 +74,7 @@ describe("application form", () => {
     expect(data.application.githubProfile).toBe("https://github.com/octocat");
     expect(data.task.status).toBe("active");
     expect(data.task.title).toBe(webTask.title);
-    const hours = (new Date(data.task.deadline).getTime() - before) / 3600000;
-    expect(hours).toBeGreaterThan(47.9);
-    expect(hours).toBeLessThan(48.1);
+    expect(new Date(data.task.deadline)).toEqual(taskDeadline(new Date(before), 48));
 
     const [task] = await db.select().from(schema.tasks).where(eq(schema.tasks.id, webTask.id));
     expect(task.assignedCount).toBe(1);

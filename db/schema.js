@@ -8,7 +8,7 @@
  * A candidate moves through four stages, derived from these tables
  * (see services/candidate.service.js#getStage):
  *   1. application  - row in `applications`
- *   2. task         - row in `task_assignments` (random task, 48h deadline)
+ *   2. task         - row in `task_assignments` (random task, due end of day 48h later)
  *   3. slot         - `users.slot_id` set (booked interview slot)
  *   4. interview    - meeting link released ~30 min before the slot
  */
@@ -227,7 +227,7 @@ export const settings = pgTable("settings", {
   applicationsOpen: boolean("applications_open").notNull().default(true),
   // Whether candidates who submitted their task can book interview slots.
   slotBookingOpen: boolean("slot_booking_open").notNull().default(true),
-  // Time to submit the task after it is assigned.
+  // Time to submit the task after it is assigned; the deadline rounds up to 11:59 PM IST that day.
   taskDurationHours: integer("task_duration_hours").notNull().default(48),
   // How long before the slot the meeting link is released (and booking closes).
   meetingLinkLeadMinutes: integer("meeting_link_lead_minutes").notNull().default(30),

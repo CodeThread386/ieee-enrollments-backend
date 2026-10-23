@@ -10,7 +10,7 @@ Firebase. The frontend lives in the `IEEE-Enrollments` repository.
 |---|---|---|
 | **Login** | "Sign in with Google". Only verified `@vitstudent.ac.in` accounts can register. | `controllers/user.controller.js#login` |
 | **1. Application** | Candidate fills the form (phone, links, first/second-choice domain, questions, one management scenario). | `submitApplication` |
-| **2. Task** | On submit, a **random active task from the first-choice domain** is assigned with a **48h deadline** (configurable). Late submissions are rejected. If the domain has no task yet, the candidate waits and is assigned automatically when an admin adds one. | `services/task.service.js` |
+| **2. Task** | On submit, a **random active task from the first-choice domain** is assigned, due at **11:59 PM IST two days later** (assigned on the 24th → due end of the 26th; the 48h duration is configurable and always rounds up to end of day). Late submissions are rejected. If the domain has no task yet, the candidate waits and is assigned automatically when an admin adds one. | `services/task.service.js` |
 | **3. Slot booking** | After submitting the task, the candidate books an interview slot. Slots have a **capacity** and close when full. Booking runs in a transaction with row locks and a `booked_count <= capacity` CHECK constraint, so a slot can't be overbooked. | `services/slot.service.js` |
 | **4. Meeting link** | **30 minutes** (configurable) before the slot the link is emailed and shown on the dashboard. Bookings can be changed until then. | `services/meetingLink.service.js` |
 

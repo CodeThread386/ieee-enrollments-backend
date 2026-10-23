@@ -2,9 +2,10 @@
  * Random task assignment.
  *
  * When a candidate submits their application they get one random active task
- * from their first-choice domain, with `taskDurationHours` (default 48h) to
- * submit it. If the domain has no tasks yet, the candidate waits in the
- * "awaiting" state and is assigned automatically as soon as an admin adds a
+ * from their first-choice domain. The deadline is the end of the IST day that
+ * `taskDurationHours` (default 48h) lands on, so a task assigned at any time
+ * on the 24th is due by 11:59 PM on the 26th. If the domain has no tasks yet,
+ * the candidate waits in the "awaiting" state and is assigned automatically as soon as an admin adds a
  * task for that domain (or on their next visit).
  */
 import { and, eq, isNull, sql } from "drizzle-orm";
@@ -12,10 +13,15 @@ import { env } from "../config/env.js";
 import { db, schema } from "../db/index.js";
 import { taskAssignedEmail } from "../lib/emailTemplates.js";
 import { sendMailInBackground } from "../lib/mail.js";
-import { HOUR } from "../lib/time.js";
+import { endOfDayIST, HOUR } from "../lib/time.js";
 import { loadCandidate } from "./candidate.service.js";
 
 const { tasks, taskAssignments, applications, users } = schema;
+
+/** Deadline for a task assigned at `assignedAt`: end of the IST day `durationHours` later. */
+export function taskDeadline(assignedAt, durationHours) {
+  return endOfDayIST(new Date(assignedAt.getTime() + durationHours * HOUR));
+}
 
 /**
  * Assigns a task to the candidate if they applied and don't have one yet.
@@ -36,7 +42,7 @@ export async function assignTaskIfNeeded(candidate, settings) {
   if (!task) return candidate; // nothing to assign yet -> "awaiting"
 
   const assignedAt = new Date();
-  const deadline = new Date(assignedAt.getTime() + settings.taskDurationHours * HOUR);
+  const deadline = taskDeadline(assignedAt, settings.taskDurationHours);
   const inserted = await db
     .insert(taskAssignments)
     .values({
