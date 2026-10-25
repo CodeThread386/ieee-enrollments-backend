@@ -185,6 +185,34 @@ describe("candidates", () => {
     expect((await agent.get("/api/admin/candidates/abc")).status).toBe(400);
   });
 
+  it("deletes a candidate, freeing their slot seat and removing their data", async () => {
+    await createTask("Web Development");
+    const slot = await createSlot();
+    const { agent: candidate, user } = await candidateReadyToBook();
+    await candidate.post(`/api/user/slots/${slot.id}/book`).expect(200);
+
+    const { agent } = await loginAdmin();
+    expect((await agent.delete(`/api/admin/candidates/${user.id}`)).status).toBe(200);
+    expect((await getSlot(slot.id)).bookedCount).toBe(0);
+    expect((await agent.get(`/api/admin/candidates/${user.id}`)).status).toBe(404);
+    expect((await db.select().from(schema.users).where(eq(schema.users.id, user.id)))).toHaveLength(0);
+  });
+
+  it("requires superadmin to delete a candidate and 404s for unknown ids", async () => {
+    const { agent: c1 } = await loginCandidate({ name: "CARL C 24BCE0003" });
+    await c1.post("/api/user/application").send(applicationBody()).expect(200);
+
+    const { agent } = await loginAdmin("admin@vitstudent.ac.in");
+    const all = await agent.get("/api/admin/candidates");
+    const { id } = all.body.data.items[0];
+    expect((await agent.delete(`/api/admin/candidates/${id}`)).status).toBe(403);
+
+    const { agent: superAgent } = await loginAdmin();
+    expect(
+      (await superAgent.delete("/api/admin/candidates/00000000-0000-4000-8000-000000000000")).status
+    ).toBe(404);
+  });
+
   it("shows results to candidates only once published", async () => {
     await createTask("Web Development");
     const slot = await createSlot();

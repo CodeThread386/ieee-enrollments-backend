@@ -30,6 +30,7 @@ router.get("/candidates/:id", h(admin.getCandidate));
 router.put("/candidates/:id/interview", h(admin.reviewCandidate));
 router.put("/candidates/:id/task-deadline", superOnly, h(admin.extendTaskDeadline));
 router.delete("/candidates/:id/booking", superOnly, h(admin.removeBooking));
+router.delete("/candidates/:id", superOnly, h(admin.deleteCandidate));
 
 // Task bank
 router.get("/tasks", h(admin.listTasks));

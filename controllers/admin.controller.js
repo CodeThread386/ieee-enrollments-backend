@@ -434,6 +434,17 @@ export async function removeBooking(req, res) {
   return res.json({ success: true, message: "Booking removed" });
 }
 
+/** DELETE /api/admin/candidates/:id - permanently removes a candidate. */
+export async function deleteCandidate(req, res) {
+  const id = assertUuid(req.params.id, "candidate id");
+  const [user] = await db.select().from(users).where(eq(users.id, id));
+  if (!user) throw new HttpError(404, "Candidate not found");
+
+  if (user.slotId) await releaseBooking(user.id, user.slotId);
+  await db.delete(users).where(eq(users.id, id));
+  return res.json({ success: true, message: "Candidate deleted" });
+}
+
 const csvCell = (value) => {
   if (value === null || value === undefined) return "";
   let str = value instanceof Date ? value.toISOString() : String(value);
