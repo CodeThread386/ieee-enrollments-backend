@@ -20,6 +20,15 @@ export const DOMAINS = [
 ];
 
 /**
+ * Domains that can only be picked as a SECOND choice. Tasks are assigned from
+ * the first choice, so these never get tasks of their own.
+ */
+export const SECOND_CHOICE_ONLY_DOMAINS = ["Competitive Coding"];
+
+/** Domains allowed as a first choice (and therefore as task domains). */
+export const FIRST_CHOICE_DOMAINS = DOMAINS.filter((d) => !SECOND_CHOICE_ONLY_DOMAINS.includes(d));
+
+/**
  * Open-ended questions shown after the profile and domain steps.
  * `id` is stored with each answer, so never reuse an id for a different question.
  */

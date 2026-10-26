@@ -24,7 +24,7 @@ import {
   sql,
   sum,
 } from "drizzle-orm";
-import { APPLICATION_QUESTIONS, DOMAINS, INTERVIEW_STATUSES } from "../config/enrollment.js";
+import { APPLICATION_QUESTIONS, DOMAINS, FIRST_CHOICE_DOMAINS, INTERVIEW_STATUSES } from "../config/enrollment.js";
 import { db, schema } from "../db/index.js";
 import { clearSession, issueSession, refreshSession } from "../lib/auth.js";
 import { HttpError } from "../lib/http.js";
@@ -212,7 +212,7 @@ export async function stats(req, res) {
       tasksSubmitted,
       tasksExpired,
       booked,
-      applicationsByDomain: DOMAINS.map((domain) => ({
+      applicationsByDomain: FIRST_CHOICE_DOMAINS.map((domain) => ({
         domain,
         count: Number(byDomain.find((d) => d.domain === domain)?.n ?? 0),
         hasActiveTask: activeDomains.includes(domain),
@@ -510,7 +510,8 @@ function parseTaskBody(body = {}, { partial = false } = {}) {
     data.description = cleanString(body.description, { field: "Description", required: true, max: 5000 });
   }
   if (!partial || body.domain !== undefined) {
-    data.domain = cleanEnum(body.domain, DOMAINS, { field: "domain" });
+    // Tasks are assigned by first choice, so second-choice-only domains can't have tasks.
+    data.domain = cleanEnum(body.domain, FIRST_CHOICE_DOMAINS, { field: "task domain" });
   }
   if (!partial || body.resources !== undefined) {
     const list = Array.isArray(body.resources) ? body.resources : [];

@@ -26,6 +26,28 @@ const setDeadline = (userId, date) =>
   db.update(schema.taskAssignments).set({ deadline: date }).where(eq(schema.taskAssignments.userId, userId));
 
 describe("application form", () => {
+  it("offers Competitive Coding only as a second choice", async () => {
+    await createTask("Web Development");
+    const { agent } = await loginCandidate();
+    const form = (await agent.get("/api/user/application/form")).body.data;
+    expect(form.domains).toContain("Competitive Coding");
+    expect(form.firstChoiceDomains).not.toContain("Competitive Coding");
+
+    const res = await agent
+      .post("/api/user/application")
+      .send(applicationBody({ firstDomain: "Web Development", secondDomain: "Competitive Coding" }));
+    expect(res.status).toBe(200);
+    expect(res.body.data.application.secondDomain).toBe("Competitive Coding");
+  });
+
+  it("does not allow tasks for second-choice-only domains", async () => {
+    const { agent } = await loginAdmin();
+    const res = await agent
+      .post("/api/admin/tasks")
+      .send({ title: "CP set", description: "Solve these", domain: "Competitive Coding" });
+    expect(res.status).toBe(400);
+  });
+
   it("serves the form with a management question that stays the same", async () => {
     const { agent } = await loginCandidate();
     const first = await agent.get("/api/user/application/form");
@@ -38,6 +60,7 @@ describe("application form", () => {
   it.each([
     [{ phone: "12345" }, /mobile number/],
     [{ firstDomain: "Underwater Basket Weaving" }, /first-choice domain/],
+    [{ firstDomain: "Competitive Coding", secondDomain: "Design" }, /only be chosen as a second choice/],
     [{ secondDomain: "Web Development" }, /different/],
     [{ githubProfile: "not a valid/user name" }, /GitHub/],
     [{ projectLink: "javascript:alert(1)" }, /link/],

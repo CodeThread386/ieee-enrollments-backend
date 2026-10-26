@@ -3,7 +3,7 @@
  * the cron trigger.
  */
 import { env } from "../config/env.js";
-import { DOMAINS } from "../config/enrollment.js";
+import { DOMAINS, FIRST_CHOICE_DOMAINS } from "../config/enrollment.js";
 import { isDbHealthy } from "../db/index.js";
 import { runScheduledDispatch } from "../services/meetingLink.service.js";
 import { getSettings } from "../services/settings.service.js";
@@ -41,6 +41,7 @@ export async function publicConfig(req, res) {
       googleClientId: env.googleClientId || null,
       devLogin: env.devLogin,
       domains: DOMAINS,
+      firstChoiceDomains: FIRST_CHOICE_DOMAINS,
       applicationsOpen: settings.applicationsOpen,
       slotBookingOpen: settings.slotBookingOpen,
       taskDurationHours: settings.taskDurationHours,

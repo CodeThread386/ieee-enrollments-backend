@@ -3,7 +3,13 @@
  */
 import { and, eq, gte } from "drizzle-orm";
 import { env } from "../config/env.js";
-import { APPLICATION_QUESTIONS, DOMAINS, managementQuestionFor } from "../config/enrollment.js";
+import {
+  APPLICATION_QUESTIONS,
+  DOMAINS,
+  FIRST_CHOICE_DOMAINS,
+  managementQuestionFor,
+  SECOND_CHOICE_ONLY_DOMAINS,
+} from "../config/enrollment.js";
 import { db, schema, UNIQUE_VIOLATION } from "../db/index.js";
 import { clearSession, issueSession, refreshSession } from "../lib/auth.js";
 import { HttpError } from "../lib/http.js";
@@ -110,6 +116,8 @@ export async function getApplicationForm(req, res) {
     data: {
       applicationsOpen: settings.applicationsOpen,
       domains: DOMAINS,
+      // Some domains (e.g. Competitive Coding) can only be a second choice.
+      firstChoiceDomains: FIRST_CHOICE_DOMAINS,
       questions: APPLICATION_QUESTIONS,
       managementQuestion: managementQuestionFor(req.candidate.id),
     },
@@ -125,7 +133,10 @@ export async function submitApplication(req, res) {
   if (candidate.application) throw new HttpError(409, "You have already submitted your application");
   if (!settings.applicationsOpen) throw new HttpError(403, "Applications are closed");
 
-  const firstDomain = cleanEnum(body.firstDomain, DOMAINS, { field: "first-choice domain" });
+  if (SECOND_CHOICE_ONLY_DOMAINS.includes(body.firstDomain)) {
+    throw new HttpError(400, `${body.firstDomain} can only be chosen as a second choice`);
+  }
+  const firstDomain = cleanEnum(body.firstDomain, FIRST_CHOICE_DOMAINS, { field: "first-choice domain" });
   const secondDomain = cleanEnum(body.secondDomain, DOMAINS, {
     field: "second-choice domain",
     required: false,
