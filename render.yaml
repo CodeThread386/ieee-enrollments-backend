@@ -42,9 +42,10 @@ services:
         sync: false
       - key: APP_URL
         sync: false
-      - key: MAIL_USER
+      # Free Render blocks SMTP, so email goes through Brevo's HTTPS API.
+      - key: BREVO_API_KEY
         sync: false
-      - key: MAIL_PASS
+      - key: MAIL_FROM
         sync: false
       - key: CRON_SECRET
         generateValue: true

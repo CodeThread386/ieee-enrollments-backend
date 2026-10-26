@@ -57,7 +57,7 @@ npm run seed           # optional: sample tasks + slots
 `npm run dev:memory -- --seed` runs the same server on an in-memory Postgres
 with sample data and dev login switched on. It never touches Neon.
 
-Without `MAIL_USER`/`MAIL_PASS`, emails are logged to the console instead of sent.
+Without `BREVO_API_KEY` or `MAIL_USER`/`MAIL_PASS`, emails are logged to the console instead of sent.
 
 ## Database & migrations
 
@@ -99,7 +99,8 @@ See [.env.example](.env.example). The important ones:
 | `ALLOWED_EMAIL_DOMAIN` | Candidate email domain, default `vitstudent.ac.in` |
 | `SUPERADMIN_EMAILS` / `ADMIN_EMAILS` | Comma-separated admin allow-lists |
 | `CLIENT_ORIGINS`, `APP_URL` | Frontend URL(s) for CORS and email links |
-| `MAIL_USER`, `MAIL_PASS` | Gmail address + App Password for emails |
+| `BREVO_API_KEY`, `MAIL_FROM` | Brevo API key + verified sender address (use on Render: its free plan blocks SMTP) |
+| `MAIL_USER`, `MAIL_PASS` | Local-only: Gmail address + App Password over SMTP |
 | `CRON_SECRET` | Protects `POST /api/cron/meeting-links` |
 
 **Roles.** *Superadmins* can do everything: tasks, slot creation and deletion,

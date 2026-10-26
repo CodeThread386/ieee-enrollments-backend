@@ -70,6 +70,8 @@ export const env = {
   devLogin: process.env.DEV_LOGIN === "true",
 
   mail: {
+    // Brevo HTTPS API key (preferred on Render free, where SMTP is blocked).
+    brevoApiKey: process.env.BREVO_API_KEY,
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
     from: process.env.MAIL_FROM || process.env.MAIL_USER,
