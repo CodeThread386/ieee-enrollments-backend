@@ -16,6 +16,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node scripts/migrate.js",
     "db:studio": "drizzle-kit studio",
+    "gmail:token": "node scripts/gmail-token.js",
     "seed": "node scripts/seed.js",
     "export:candidates": "python scripts/export_candidates.py",
     "cron:meeting-links": "node scripts/send-meeting-links.js",

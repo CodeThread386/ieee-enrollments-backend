@@ -70,8 +70,10 @@ export const env = {
   devLogin: process.env.DEV_LOGIN === "true",
 
   mail: {
-    // Brevo HTTPS API key (preferred on Render free, where SMTP is blocked).
-    brevoApiKey: process.env.BREVO_API_KEY,
+    // Gmail API (HTTPS) credentials; preferred on Render free, where SMTP is blocked.
+    gmailClientId: process.env.GMAIL_CLIENT_ID,
+    gmailClientSecret: process.env.GMAIL_CLIENT_SECRET,
+    gmailRefreshToken: process.env.GMAIL_REFRESH_TOKEN,
     user: process.env.MAIL_USER,
     pass: process.env.MAIL_PASS,
     from: process.env.MAIL_FROM || process.env.MAIL_USER,

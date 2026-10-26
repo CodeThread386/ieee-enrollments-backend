@@ -57,7 +57,20 @@ npm run seed           # optional: sample tasks + slots
 `npm run dev:memory -- --seed` runs the same server on an in-memory Postgres
 with sample data and dev login switched on. It never touches Neon.
 
-Without `BREVO_API_KEY` or `MAIL_USER`/`MAIL_PASS`, emails are logged to the console instead of sent.
+Emails go through the Gmail API (HTTPS), because Render's free plan blocks SMTP.
+One-time setup, signed in as the sending account (`ieee@vit.ac.in`):
+
+1. Google Cloud Console: create a project, enable the **Gmail API**, and set up
+   the OAuth consent screen. Prefer **Internal** if the project is in the VIT
+   Workspace organisation. If it has to be **External**, publish it
+   ("In production"); in "Testing" mode refresh tokens expire after 7 days.
+2. Credentials -> Create OAuth client ID -> **Desktop app**. Put its ID and
+   secret in `.env` as `GMAIL_CLIENT_ID` / `GMAIL_CLIENT_SECRET`.
+3. `npm run gmail:token`, approve in the browser, and copy the printed
+   `GMAIL_REFRESH_TOKEN` into `.env` (and into Render).
+
+Without those, `MAIL_USER`/`MAIL_PASS` (Gmail app password over SMTP) still
+works locally; with neither, emails are logged to the console instead of sent.
 
 ## Database & migrations
 
@@ -99,7 +112,7 @@ See [.env.example](.env.example). The important ones:
 | `ALLOWED_EMAIL_DOMAIN` | Candidate email domain, default `vitstudent.ac.in` |
 | `SUPERADMIN_EMAILS` / `ADMIN_EMAILS` | Comma-separated admin allow-lists |
 | `CLIENT_ORIGINS`, `APP_URL` | Frontend URL(s) for CORS and email links |
-| `BREVO_API_KEY`, `MAIL_FROM` | Brevo API key + verified sender address (use on Render: its free plan blocks SMTP) |
+| `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `MAIL_FROM` | Gmail API credentials and sender (use on Render) |
 | `MAIL_USER`, `MAIL_PASS` | Local-only: Gmail address + App Password over SMTP |
 | `CRON_SECRET` | Protects `POST /api/cron/meeting-links` |
 

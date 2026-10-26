@@ -61,6 +61,13 @@ describe("application form", () => {
     [{ phone: "12345" }, /mobile number/],
     [{ firstDomain: "Underwater Basket Weaving" }, /first-choice domain/],
     [{ firstDomain: "Competitive Coding", secondDomain: "Design" }, /only be chosen as a second choice/],
+    // Every question is mandatory.
+    [{ githubProfile: "" }, /GitHub profile is required/],
+    [{ linkedinProfile: "" }, /LinkedIn profile is required/],
+    [{ projectLink: "" }, /Project link is required/],
+    [{ projectDescription: " " }, /Project description is required/],
+    [{ secondDomain: "" }, /second-choice domain is required/],
+    [{ answers: { whyIeee: "a", currentSkills: "b", exploreNext: "c", pastExperience: "", commitment: "d" } }, /required/],
     [{ secondDomain: "Web Development" }, /different/],
     [{ githubProfile: "not a valid/user name" }, /GitHub/],
     [{ projectLink: "javascript:alert(1)" }, /link/],

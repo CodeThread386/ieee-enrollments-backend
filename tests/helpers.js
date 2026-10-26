@@ -61,7 +61,7 @@ export function applicationBody(overrides = {}) {
   return {
     phone: "9876543210",
     githubProfile: "octocat",
-    linkedinProfile: "",
+    linkedinProfile: "https://www.linkedin.com/in/octocat",
     projectLink: "https://example.com/project",
     projectDescription: "A thing I built",
     firstDomain: "Web Development",
@@ -70,7 +70,7 @@ export function applicationBody(overrides = {}) {
       whyIeee: "To learn and build",
       currentSkills: "HTML, CSS",
       exploreNext: "React",
-      pastExperience: "",
+      pastExperience: "Built a club website",
       commitment: "8 hours",
     },
     managementAnswer: "Talk to both and find common ground",

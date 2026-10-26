@@ -137,10 +137,8 @@ export async function submitApplication(req, res) {
     throw new HttpError(400, `${body.firstDomain} can only be chosen as a second choice`);
   }
   const firstDomain = cleanEnum(body.firstDomain, FIRST_CHOICE_DOMAINS, { field: "first-choice domain" });
-  const secondDomain = cleanEnum(body.secondDomain, DOMAINS, {
-    field: "second-choice domain",
-    required: false,
-  });
+  // Every question on the form is mandatory, including the second choice.
+  const secondDomain = cleanEnum(body.secondDomain, DOMAINS, { field: "second-choice domain" });
   if (secondDomain && secondDomain === firstDomain) {
     throw new HttpError(400, "Your second choice must be different from your first choice");
   }
@@ -156,10 +154,18 @@ export async function submitApplication(req, res) {
   const values = {
     userId: candidate.id,
     phone: cleanPhone(body.phone),
-    githubProfile: cleanGithub(body.githubProfile),
-    linkedinProfile: cleanUrl(body.linkedinProfile, { field: "LinkedIn profile", hostIncludes: "linkedin.com" }),
-    projectLink: cleanUrl(body.projectLink, { field: "Project link" }),
-    projectDescription: cleanString(body.projectDescription, { field: "Project description", max: 1000 }),
+    githubProfile: cleanGithub(body.githubProfile, { required: true }),
+    linkedinProfile: cleanUrl(body.linkedinProfile, {
+      field: "LinkedIn profile",
+      required: true,
+      hostIncludes: "linkedin.com",
+    }),
+    projectLink: cleanUrl(body.projectLink, { field: "Project link", required: true }),
+    projectDescription: cleanString(body.projectDescription, {
+      field: "Project description",
+      required: true,
+      max: 1000,
+    }),
     firstDomain,
     secondDomain,
     answers,

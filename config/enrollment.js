@@ -55,8 +55,8 @@ export const APPLICATION_QUESTIONS = [
   {
     id: "pastExperience",
     label:
-      "Tell us about any project, hackathon, competition or event you have been part of. What problems did you face and how did you solve them?",
-    required: false,
+      "Tell us about any project, hackathon, competition or event you have been part of. What problems did you face and how did you solve them? (If you haven't done one yet, tell us what you'd like to build first.)",
+    required: true,
     maxLength: 1200,
   },
   {
