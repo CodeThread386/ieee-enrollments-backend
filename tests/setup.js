@@ -9,6 +9,7 @@ process.env.DATABASE_URL = "pglite://memory";
 process.env.ACCESS_TOKEN_SECRET = "test-access-secret";
 process.env.REFRESH_TOKEN_SECRET = "test-refresh-secret";
 process.env.ALLOWED_EMAIL_DOMAIN = "vitstudent.ac.in";
+process.env.ALLOWED_BATCH_YEARS = ""; // any batch by default; batch tests set it themselves
 process.env.ADMIN_EMAILS = "admin@vitstudent.ac.in";
 process.env.SUPERADMIN_EMAILS = "super@vit.ac.in";
 process.env.CRON_SECRET = "cron-secret";

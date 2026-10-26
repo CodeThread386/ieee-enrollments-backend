@@ -110,6 +110,7 @@ See [.env.example](.env.example). The important ones:
 | `GOOGLE_CLIENT_ID` | OAuth Web client ID for "Sign in with Google" |
 | `DEV_LOGIN` | `true` = email-only login for local testing (never in production) |
 | `ALLOWED_EMAIL_DOMAIN` | Candidate email domain, default `vitstudent.ac.in` |
+| `ALLOWED_BATCH_YEARS` | Only these batches can enroll, e.g. `2026`: the email must end with the year before the `@` (`name2026@vitstudent.ac.in`). Comma separated; empty = any batch |
 | `SUPERADMIN_EMAILS` / `ADMIN_EMAILS` | Comma-separated admin allow-lists |
 | `CLIENT_ORIGINS`, `APP_URL` | Frontend URL(s) for CORS and email links |
 | `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`, `MAIL_FROM` | Gmail API credentials and sender (use on Render) |

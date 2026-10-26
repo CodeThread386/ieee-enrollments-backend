@@ -77,6 +77,55 @@ describe("candidate login", () => {
   });
 });
 
+describe("batch restriction (ALLOWED_BATCH_YEARS)", () => {
+  const onlyBatch = async (years, fn) => {
+    env.allowedBatchYears.splice(0, env.allowedBatchYears.length, ...years);
+    try {
+      await fn();
+    } finally {
+      env.allowedBatchYears.splice(0);
+    }
+  };
+
+  it("lets in only emails ending with an allowed year", async () => {
+    await onlyBatch(["2026"], async () => {
+      const ok = await loginCandidate({ email: "rahul.sharma2026@vitstudent.ac.in" });
+      expect(ok.res.status).toBe(201);
+
+      const senior = await loginCandidate({ email: "priya.k2025@vitstudent.ac.in" });
+      expect(senior.res.status).toBe(403);
+      expect(senior.res.body.message).toMatch(/2026 batch/);
+
+      const noYear = await loginCandidate({ email: "someone@vitstudent.ac.in" });
+      expect(noYear.res.status).toBe(403);
+
+      // The year must be at the end of the name, not anywhere in it.
+      const trick = await loginCandidate({ email: "x2026y2024@vitstudent.ac.in" });
+      expect(trick.res.status).toBe(403);
+    });
+  });
+
+  it("accepts several years and locks out existing accounts from other batches", async () => {
+    const { agent } = await loginCandidate({ email: "old.student2024@vitstudent.ac.in" });
+    expect((await agent.get("/api/user")).status).toBe(200);
+
+    await onlyBatch(["2025", "2026"], async () => {
+      expect((await loginCandidate({ email: "a.b2025@vitstudent.ac.in" })).res.status).toBe(201);
+      // Registered before the rule: their session no longer works.
+      const blocked = await agent.get("/api/user");
+      expect(blocked.status).toBe(403);
+      expect(blocked.body.message).toMatch(/2025 \/ 2026 batch/);
+    });
+  });
+
+  it("does not affect admins", async () => {
+    await onlyBatch(["2026"], async () => {
+      const { res } = await loginAdmin("admin@vitstudent.ac.in");
+      expect(res.status).toBe(200);
+    });
+  });
+});
+
 describe("Google sign-in (ID token)", () => {
   const googleLogin = (claims) =>
     request(app)

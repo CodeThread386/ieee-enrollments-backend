@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { env } from "../config/env.js";
 import { db, schema } from "../db/index.js";
 import { readAccessToken } from "../lib/auth.js";
+import { eligibilityMessage, isAllowedBatch } from "../lib/eligibility.js";
 import { verifyGoogleIdToken } from "../lib/google.js";
 import { asyncHandler, HttpError } from "../lib/http.js";
 import { loadCandidate } from "../services/candidate.service.js";
@@ -57,6 +58,8 @@ export const protectUser = asyncHandler(async (req, res, next) => {
   const userId = readAccessToken(req, "user");
   const candidate = await loadCandidate(userId);
   if (!candidate) throw new HttpError(401, "Account not found");
+  // Batch rule applies to existing sessions too (e.g. accounts made before it was set).
+  if (!isAllowedBatch(candidate.email)) throw new HttpError(403, eligibilityMessage());
   req.candidate = candidate;
   next();
 });

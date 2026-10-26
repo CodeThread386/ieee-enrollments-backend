@@ -38,6 +38,7 @@ export async function publicConfig(req, res) {
     success: true,
     data: {
       allowedEmailDomain: env.allowedEmailDomain,
+      allowedBatchYears: env.allowedBatchYears,
       googleClientId: env.googleClientId || null,
       devLogin: env.devLogin,
       domains: DOMAINS,

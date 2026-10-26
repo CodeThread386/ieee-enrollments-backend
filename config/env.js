@@ -57,6 +57,11 @@ export const env = {
     process.env.ALLOWED_EMAIL_DOMAIN || "vitstudent.ac.in"
   ).toLowerCase(),
 
+  // Only these batches may enroll: VIT student emails end with the joining
+  // year before the @ (e.g. rahul.sharma2026@vitstudent.ac.in). Comma
+  // separated, e.g. "2026" or "2025,2026". Empty = any batch.
+  allowedBatchYears: toList(process.env.ALLOWED_BATCH_YEARS),
+
   // Admin access is granted purely by these allow-lists (checked on every request).
   adminEmails: toList(process.env.ADMIN_EMAILS),
   superadminEmails: toList(process.env.SUPERADMIN_EMAILS),

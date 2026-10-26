@@ -12,6 +12,7 @@ import {
 } from "../config/enrollment.js";
 import { db, schema, UNIQUE_VIOLATION } from "../db/index.js";
 import { clearSession, issueSession, refreshSession } from "../lib/auth.js";
+import { eligibilityMessage, isAllowedBatch } from "../lib/eligibility.js";
 import { HttpError } from "../lib/http.js";
 import {
   assertUuid,
@@ -61,8 +62,8 @@ export async function login(req, res) {
   const domainOk =
     normalisedEmail.endsWith(`@${env.allowedEmailDomain}`) &&
     (!hostedDomain || hostedDomain.toLowerCase() === env.allowedEmailDomain);
-  if (!domainOk) {
-    throw new HttpError(403, `Please sign in with your VIT student email (@${env.allowedEmailDomain})`);
+  if (!domainOk || !isAllowedBatch(normalisedEmail)) {
+    throw new HttpError(403, eligibilityMessage());
   }
 
   const parsed = parseGoogleName(name || normalisedEmail.split("@")[0]);
