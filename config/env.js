@@ -62,6 +62,10 @@ export const env = {
   // separated, e.g. "2026" or "2025,2026". Empty = any batch.
   allowedBatchYears: toList(process.env.ALLOWED_BATCH_YEARS),
 
+  // Emails that may enroll even though they are not in an allowed batch
+  // (e.g. a team member testing the deployed site). Still need the email domain.
+  batchExceptionEmails: toList(process.env.BATCH_EXCEPTION_EMAILS),
+
   // Admin access is granted purely by these allow-lists (checked on every request).
   adminEmails: toList(process.env.ADMIN_EMAILS),
   superadminEmails: toList(process.env.SUPERADMIN_EMAILS),

@@ -25,6 +25,9 @@ services:
       # Only the 2026 batch (emails ending in 2026@vitstudent.ac.in) can enroll.
       - key: ALLOWED_BATCH_YEARS
         value: "2026"
+      # ...plus these emails from other batches (testing the live site).
+      - key: BATCH_EXCEPTION_EMAILS
+        value: sarthak.trivedi2024@vitstudent.ac.in
       - key: COOKIE_SAMESITE
         value: lax
       - key: ENABLE_INTERNAL_SCHEDULER

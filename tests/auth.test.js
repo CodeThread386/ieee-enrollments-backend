@@ -118,6 +118,18 @@ describe("batch restriction (ALLOWED_BATCH_YEARS)", () => {
     });
   });
 
+  it("lets in exception emails from other batches", async () => {
+    env.batchExceptionEmails.push("tester2024@vitstudent.ac.in");
+    try {
+      await onlyBatch(["2026"], async () => {
+        expect((await loginCandidate({ email: "Tester2024@vitstudent.ac.in" })).res.status).toBe(201);
+        expect((await loginCandidate({ email: "other2024@vitstudent.ac.in" })).res.status).toBe(403);
+      });
+    } finally {
+      env.batchExceptionEmails.splice(0);
+    }
+  });
+
   it("does not affect admins", async () => {
     await onlyBatch(["2026"], async () => {
       const { res } = await loginAdmin("admin@vitstudent.ac.in");
