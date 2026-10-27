@@ -46,6 +46,7 @@ import {
   slotEnd,
   toCandidate,
 } from "../services/candidate.service.js";
+import { emailAnnouncementInBackground } from "../services/announcement.service.js";
 import {
   dispatchDueMeetingLinks,
   resetSlotNotifications,
@@ -846,6 +847,14 @@ export async function updateSettingsHandler(req, res) {
     patch.announcement = cleanString(body.announcement, { field: "Announcement", max: 500 }) || "";
   }
   if (Object.keys(patch).length === 0) throw new HttpError(400, "Nothing to update");
+  const previous = await getSettings();
   const saved = await saveSettings(patch);
-  return res.json({ success: true, message: "Settings saved", data: serializeSettings(saved) });
+  // A new (changed, non-empty) announcement is also emailed to every candidate.
+  const announced = Boolean(saved.announcement) && saved.announcement !== previous.announcement;
+  if (announced) emailAnnouncementInBackground(saved.announcement);
+  return res.json({
+    success: true,
+    message: announced ? "Settings saved - emailing the announcement to all candidates" : "Settings saved",
+    data: serializeSettings(saved),
+  });
 }

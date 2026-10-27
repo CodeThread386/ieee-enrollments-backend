@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { sent } from "../lib/mail.js";
 import {
   applicationBody,
   candidateReadyToBook,
@@ -248,5 +249,21 @@ describe("settings", () => {
       .send({ taskDurationHours: 72, announcement: "Interviews start Monday" });
     expect(ok.body.data).toMatchObject({ taskDurationHours: 72, announcement: "Interviews start Monday" });
     expect(ok.body.data).not.toHaveProperty("key");
+  });
+
+  it("emails a new announcement to every candidate", async () => {
+    await loginCandidate();
+    const { agent } = await loginAdmin();
+    sent.length = 0;
+    await agent.put("/api/admin/settings").send({ announcement: "Interviews start Monday" });
+    await vi.waitFor(() => expect(sent.filter((m) => m.subject.includes("New update"))).toHaveLength(1));
+    expect(sent.at(-1).html).toContain("Interviews start Monday");
+
+    // Unchanged or cleared announcements send nothing.
+    sent.length = 0;
+    await agent.put("/api/admin/settings").send({ announcement: "Interviews start Monday" });
+    await agent.put("/api/admin/settings").send({ announcement: "" });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(sent).toHaveLength(0);
   });
 });
