@@ -23,15 +23,14 @@ import { invalidateLinkSchedule } from "./linkSchedule.js";
 
 const { slots, users } = schema;
 
-/** Domains a candidate may book slots for (their first and second choice). */
-const candidateDomains = (c) =>
-  [c.application?.firstDomain, c.application?.secondDomain].filter(Boolean);
+/** The candidate's primary domain is the only domain-specific booking option. */
+const candidateDomains = (c) => [c.application?.firstDomain].filter(Boolean);
 
 /** Booking closes when the meeting link is released (e.g. 30 min before). */
 const bookingCutoff = (settings, now) =>
   new Date(now.getTime() + settings.meetingLinkLeadMinutes * MINUTE);
 
-/** SQL condition: slot is open to this candidate's domains. */
+/** SQL condition: slot is shared or belongs to the candidate's primary domain. */
 const domainMatches = (c) =>
   or(isNull(slots.domain), inArray(slots.domain, candidateDomains(c)));
 
