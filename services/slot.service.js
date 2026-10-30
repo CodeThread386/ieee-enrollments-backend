@@ -23,14 +23,15 @@ import { invalidateLinkSchedule } from "./linkSchedule.js";
 
 const { slots, users } = schema;
 
-/** The candidate's primary domain is the only domain-specific booking option. */
-const candidateDomains = (c) => [c.application?.firstDomain].filter(Boolean);
+/** Domains a candidate may book slots for (strictly their first choice). */
+const candidateDomains = (c) =>
+  [c.application?.firstDomain].filter(Boolean);
 
 /** Booking closes when the meeting link is released (e.g. 30 min before). */
 const bookingCutoff = (settings, now) =>
   new Date(now.getTime() + settings.meetingLinkLeadMinutes * MINUTE);
 
-/** SQL condition: slot is shared or belongs to the candidate's primary domain. */
+/** SQL condition: slot is open to this candidate's domains. */
 const domainMatches = (c) =>
   or(isNull(slots.domain), inArray(slots.domain, candidateDomains(c)));
 
@@ -90,9 +91,29 @@ export async function bookSlot(c, slotId, settings, now = new Date()) {
       )
       .returning();
 
+    // Fallback inspection only runs if the atomic update did not succeed
     if (!seat) {
-      const [exists] = await tx.select({ id: slots.id }).from(slots).where(eq(slots.id, slotId));
+      const [exists] = await tx
+        .select({ id: slots.id, domain: slots.domain })
+        .from(slots)
+        .where(eq(slots.id, slotId));
+
       if (!exists) throw new HttpError(404, "Slot not found");
+
+      const primaryDomain = c.application?.firstDomain;
+      if (exists.domain && exists.domain !== primaryDomain) {
+        if (exists.domain === c.application?.secondDomain) {
+          throw new HttpError(
+            403,
+            `You can only book interview slots for your primary domain (${primaryDomain}). Secondary domain slots cannot be booked.`
+          );
+        }
+        throw new HttpError(
+          403,
+          `This slot is reserved for ${exists.domain}, which does not match your primary domain (${primaryDomain}).`
+        );
+      }
+
       throw new HttpError(
         409,
         "Sorry, this slot just filled up or is no longer available. Please pick another one."

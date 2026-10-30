@@ -24,7 +24,8 @@ import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
+from zoneinfo import ZoneInfo
 
 try:
     from dotenv import load_dotenv
@@ -63,14 +64,21 @@ def sanitize_formula_injection(value: Any) -> Any:
     return value
 
 
-def format_dt(dt: Optional[datetime]) -> str:
-    """Format datetime into standard readable string."""
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def format_dt(dt: Optional[Union[datetime, str]]) -> str:
+    """Format datetime into standard readable IST string."""
     if not dt:
         return ""
     if isinstance(dt, str):
-        return dt
-    # Format as YYYY-MM-DD HH:MM UTC
-    return dt.strftime("%Y-%m-%d %H:%M")
+        try:
+            dt = datetime.fromisoformat(dt.replace("Z", "+00:00"))
+        except ValueError:
+            return dt
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(IST).strftime("%d/%m/%Y, %I:%M %p")
 
 
 def compute_stage(app_submitted: bool, task_submitted: bool, slot_id: Optional[str]) -> str:

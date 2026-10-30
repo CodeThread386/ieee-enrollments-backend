@@ -175,7 +175,7 @@ export const slots = pgTable(
     durationMinutes: integer("duration_minutes").notNull().default(20),
     capacity: integer("capacity").notNull().default(1),
     bookedCount: integer("booked_count").notNull().default(0),
-    // Restrict to candidates whose first/second domain matches (null = anyone).
+    // Restrict to candidates whose first domain matches (null = anyone).
     domain: text("domain"),
     meetLink: text("meet_link"),
     notes: text("notes"),

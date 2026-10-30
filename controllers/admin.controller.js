@@ -28,7 +28,7 @@ import { APPLICATION_QUESTIONS, DOMAINS, FIRST_CHOICE_DOMAINS, INTERVIEW_STATUSE
 import { db, schema } from "../db/index.js";
 import { clearSession, issueSession, refreshSession } from "../lib/auth.js";
 import { HttpError } from "../lib/http.js";
-import { MINUTE } from "../lib/time.js";
+import { dayKeyIST, formatISTCsv, MINUTE } from "../lib/time.js";
 import {
   assertUuid,
   cleanDate,
@@ -448,7 +448,7 @@ export async function deleteCandidate(req, res) {
 
 const csvCell = (value) => {
   if (value === null || value === undefined) return "";
-  let str = value instanceof Date ? value.toISOString() : String(value);
+  let str = value instanceof Date ? formatISTCsv(value) : String(value);
   // Neutralise spreadsheet formula injection.
   if (/^[=+\-@]/.test(str)) str = `'${str}`;
   return /[",\n\r]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
@@ -491,7 +491,7 @@ export async function exportCandidates(req, res) {
   res.setHeader("Content-Type", "text/csv; charset=utf-8");
   res.setHeader(
     "Content-Disposition",
-    `attachment; filename="ieee-enrollments-${now.toISOString().slice(0, 10)}.csv"`
+    `attachment; filename="ieee-enrollments-${dayKeyIST(now)}.csv"`
   );
   // BOM so Excel opens UTF-8 correctly.
   return res.send(`\uFEFF${csv}`);
